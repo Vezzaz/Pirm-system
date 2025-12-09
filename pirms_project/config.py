@@ -1,0 +1,5 @@
+SEASONS = [2021, 2022]
+N_PLAYERS = 150
+WEEKS_PER_SEASON = 17
+
+OUTPUT_DATASET = "pirms_synthetic_dataset.csv"
