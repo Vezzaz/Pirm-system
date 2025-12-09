@@ -19,33 +19,96 @@ st.set_page_config(
 st.title("🏈 Player Injury Risk Monitoring System (PIRMS)")
 st.write("Synthetic-data machine learning system for NFL-style injury analysis.")
 
+# ============================================
+# OPTIONAL: USER-UPLOADED NFL DATA
+# ============================================
+st.header("📤 Upload Your Own NFL Data (Optional)")
+
+st.write("""
+If you have real NFL datasets (e.g., weekly stats, injury logs, player rosters),
+upload them here and PIRMS will attempt to use them instead of synthetic data.
+Supported formats: **CSV files**.
+""")
+
+uploaded_stats = st.file_uploader("Upload Weekly Player Stats CSV", type=["csv"])
+uploaded_injuries = st.file_uploader("Upload Injury Log CSV", type=["csv"])
+
+use_real_data = False
+user_stats_df = None
+user_injury_df = None
+
+if uploaded_stats is not None:
+    try:
+        user_stats_df = pd.read_csv(uploaded_stats)
+        st.success("Player stats file uploaded successfully!")
+        st.write(user_stats_df.head())
+        use_real_data = True
+    except Exception as e:
+        st.error(f"Failed to load stats file: {e}")
+
+if uploaded_injuries is not None:
+    try:
+        user_injury_df = pd.read_csv(uploaded_injuries)
+        st.success("Injury log file uploaded successfully!")
+        st.write(user_injury_df.head())
+        use_real_data = True
+    except Exception as e:
+        st.error(f"Failed to load injury file: {e}")
+
 
 # ============================================
-# RUN PIPELINE BUTTON
+# RUN PIPELINE BUTTON (Supports Real or Synthetic Data)
 # ============================================
-if st.button("Run Full Pipeline (Generate Data → EDA → Model Training)"):
-    st.write("🔄 Running synthetic data pipeline...")
+st.header("🏈 Run PIRMS Pipeline")
 
-    df = build_pirms()
-    st.success("Dataset generated!")
+if st.button("Run Pipeline"):
+    st.write("🔄 Starting pipeline...")
 
-    st.write(df.head())
+    # ------------------------------
+    # OPTION A: Use user-uploaded data
+    # ------------------------------
+    if use_real_data and (user_stats_df is not None) and (user_injury_df is not None):
+        st.write("📡 Using uploaded NFL datasets...")
 
-    st.write("🔄 Preprocessing...")
-    df = preprocess_data(df)
+        from preprocess import merge_data
+        from feature_engineering import engineer_features
 
-    st.write("🔄 Feature engineering...")
-    df = engineer_features(df)
+        try:
+            # Merge the real data
+            df = merge_data(user_stats_df, user_injury_df)
 
+            # Preprocess
+            df = preprocess_data(df)
+
+            # Feature engineering
+            df = engineer_features(df)
+
+            st.success("Real data processed successfully!")
+            st.write(df.head())
+
+        except Exception as e:
+            st.error(f"Error processing uploaded data: {e}")
+            st.stop()
+
+    else:
+        # ------------------------------
+        # OPTION B: Use synthetic data
+        # ------------------------------
+        st.write("🧪 No real data detected — generating synthetic dataset...")
+        df = build_pirms()
+        df = preprocess_data(df)
+        df = engineer_features(df)
+
+    # ------------------------------
+    # Continue with EDA and Modeling
+    # ------------------------------
     st.write("📊 Running EDA...")
     run_eda(df)
-    st.success("EDA Complete! Plots saved to /plots")
 
-    st.write("🤖 Training ML models...")
+    st.write("🤖 Training ML Models...")
     train_models(df)
-    st.success("Models trained! Results saved to /models")
 
-    st.write("🎉 Pipeline Finished!")
+    st.success("🎉 Pipeline finished successfully!")
 
 
 # ============================================
